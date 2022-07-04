@@ -1,5 +1,7 @@
+import java.awt.BorderLayout;
 import java.awt.ComponentOrientation;
 import java.awt.EventQueue;
+import java.awt.GridLayout;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.BufferedReader;
@@ -10,6 +12,7 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.Map;
 import java.util.Random;
 import java.util.logging.Handler;
@@ -23,7 +26,9 @@ import javax.swing.JScrollPane;
 import javax.swing.JLabel;
 import javax.swing.JTextField;
 import javax.swing.ScrollPaneConstants;
+import javax.swing.SwingConstants;
 import javax.swing.JList;
+import javax.swing.JOptionPane;
 import javax.swing.ListSelectionModel;
 
 public class HomeScreen {
@@ -109,6 +114,28 @@ public class HomeScreen {
 		
 		JButton btnAdd = new JButton("New Word");
 		btnAdd.setBounds(526, 27, 117, 29);
+		btnAdd.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				Hashtable<String, String> result = showCreateDialog(frame);
+				String slag = result.get("slag");
+				String mean = result.get("mean");
+				if (!slag.isEmpty() && !mean.isEmpty()) {
+					if (baseSlangs.containsKey(slag)) {
+						showDialog("Warning", "This word is existed!");
+					} else {
+						Slang s = new Slang();
+						s.setMeaning(mean);
+						s.setSlag(slag);
+						listMode.addElement(s.toString());
+						
+						writeData(SLANGS_FILE_PATH, slag + "`" + mean, true);
+					}
+				}
+			}
+			
+		});
 		frame.getContentPane().add(btnAdd);
 		
 		btnReset.setBounds(413, 27, 117, 29);
@@ -259,6 +286,30 @@ public class HomeScreen {
 			e.printStackTrace();
 		}
 		return slangs;
+	}
+	
+	public Hashtable<String, String> showCreateDialog(JFrame frame) {
+	    Hashtable<String, String> logininformation = new Hashtable<String, String>();
+
+	    JPanel panel = new JPanel(new BorderLayout(5, 5));
+
+	    JPanel label = new JPanel(new GridLayout(0, 1, 2, 2));
+	    label.add(new JLabel("Slag", SwingConstants.RIGHT));
+	    label.add(new JLabel("Meaning", SwingConstants.RIGHT));
+	    panel.add(label, BorderLayout.WEST);
+
+	    JPanel controls = new JPanel(new GridLayout(0, 1, 10, 2));
+	    JTextField slag = new JTextField();
+	    controls.add(slag);
+	    JTextField mean = new JTextField();
+	    controls.add(mean);
+	    panel.add(controls, BorderLayout.CENTER);
+
+	    JOptionPane.showMessageDialog(frame, panel, "New Slangword", JOptionPane.PLAIN_MESSAGE);
+
+	    logininformation.put("slag", slag.getText());
+	    logininformation.put("mean", mean.getText());
+	    return logininformation;
 	}
 	
 	private String readHistoriesData() {
