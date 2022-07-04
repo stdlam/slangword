@@ -123,7 +123,7 @@ public class HomeScreen {
 				String mean = result.get("mean");
 				if (!slag.isEmpty() && !mean.isEmpty()) {
 					if (baseSlangs.containsKey(slag)) {
-						showDialog("Warning", "This word is existed!");
+						showDialog(frame, "Warning", "This word is existed!");
 					} else {
 						Slang s = new Slang();
 						s.setMeaning(mean);
@@ -131,6 +131,7 @@ public class HomeScreen {
 						listMode.addElement(s.toString());
 						
 						writeData(SLANGS_FILE_PATH, slag + "`" + mean, true);
+						showDialog(frame, "Message", "This word is saved!");
 					}
 				}
 			}
@@ -194,24 +195,6 @@ public class HomeScreen {
 				listMode.add(index++, data[i].toString());
 			}
 		}
-	}
-	
-	private void showDialog(String title, String content) {
-		JDialog d1 = new JDialog();
-		 
-        // create a label
-        JLabel l = new JLabel(content);
-
-        d1.getContentPane().add(l);
-
-        // setsize of dialog
-        d1.setSize(200, 200);
-
-        // set location of dialog
-        d1.setLocation(200, 200);
-
-        // set visibility of dialog
-        d1.setVisible(true);
 	}
 	
 	private void resetResultList() {
@@ -310,6 +293,14 @@ public class HomeScreen {
 	    logininformation.put("slag", slag.getText());
 	    logininformation.put("mean", mean.getText());
 	    return logininformation;
+	}
+	
+	private void showDialog(JFrame frame, String title, String content) {
+		JPanel panel = new JPanel(new BorderLayout(5, 5));
+	    JPanel label = new JPanel(new GridLayout(0, 1, 2, 2));
+	    label.add(new JLabel(content, SwingConstants.RIGHT));
+	    panel.add(label, BorderLayout.WEST);
+		JOptionPane.showMessageDialog(frame, panel, title, JOptionPane.PLAIN_MESSAGE);
 	}
 	
 	private String readHistoriesData() {
