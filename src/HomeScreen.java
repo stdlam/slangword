@@ -8,8 +8,14 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileWriter;
+import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Hashtable;
@@ -27,6 +33,8 @@ import javax.swing.JLabel;
 import javax.swing.JTextField;
 import javax.swing.ScrollPaneConstants;
 import javax.swing.SwingConstants;
+import javax.swing.event.ListSelectionEvent;
+import javax.swing.event.ListSelectionListener;
 import javax.swing.JList;
 import javax.swing.JOptionPane;
 import javax.swing.ListSelectionModel;
@@ -162,11 +170,93 @@ public class HomeScreen {
 		
 		JList<String> listResult = new JList<String>(listMode);
 		listResult.setVisibleRowCount(30);
+		listResult.addListSelectionListener((ListSelectionListener) new ListSelectionListener() {
+
+			@Override
+			public void valueChanged(ListSelectionEvent e) {
+				if (!e.getValueIsAdjusting()) {
+					String selected = listResult.getSelectedValue();
+	                if (selected != null) {
+	                	btnEdit.setEnabled(true);
+	                	btnDelete.setEnabled(true);
+	                }
+	            }
+			}
+			
+		});
 		JScrollPane scrollPane = new JScrollPane(listResult);
 		scrollPane.setBounds(34, 188, 609, 349);
 		frame.getContentPane().add(scrollPane);
 		
+		btnEdit.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				String selected = listResult.getSelectedValue().toString();
+				String[] data = selected.split(": ");
+            
+            	if (data.length > 1) {
+            		String oldSlag = data[0];
+            		String oldMean = data[1];
+            		Hashtable<String, String> result = showEditDialog(frame, oldSlag, oldMean);
+            		String slag = result.get("slag");
+     				String mean = result.get("mean");
+     				boolean isUpdatableSlag = !baseSlangs.containsKey(slag) && !slag.contentEquals(oldSlag);
+     				boolean isChanged = (!oldMean.contentEquals(mean) && oldSlag.contentEquals(slag)) || (!oldMean.contentEquals(mean) && isUpdatableSlag) || (oldMean.contentEquals(mean) && isUpdatableSlag);
+     				
+            		if (isChanged) {
+            			int updateIndex = listMode.indexOf(selected);
+            			listMode.set(updateIndex, slag + ": " + mean);
+            			updateInFile(SLANGS_FILE_PATH, oldSlag + "`" + oldMean, slag + "`" + mean);
+            			System.out.println("updated valude: " + selected + ", newer: " + slag + ": " + mean);
+            		}
+            	}
+			}
+			
+		});
+		
 		setupViews(lblWord);
+	}
+	
+	private void updateInFile(String filePath, String older, String newer) {
+		System.out.println("updateInFile - filePath=" + filePath + ", older=" + older + ", newer=" + newer);
+		try {
+			Path path = Paths.get(filePath);
+			Charset charset = StandardCharsets.UTF_8;
+
+			String content = new String(Files.readAllBytes(path), charset);
+			content = content.replace(older, newer);
+			Files.write(path, content.getBytes(charset));
+		  } catch (IOException e) {
+		     //Simple exception handling, replace with what's necessary for your use case!
+		     throw new RuntimeException("Generating file failed", e);
+		  }
+	}
+	
+	private Hashtable<String, String> showEditDialog(JFrame frame, String slagText, String meaningText) {
+	    Hashtable<String, String> updateInformation = new Hashtable<String, String>();
+
+	    JPanel panel = new JPanel(new BorderLayout(5, 5));
+
+	    JPanel label = new JPanel(new GridLayout(0, 1, 2, 2));
+	    label.add(new JLabel("Slag", SwingConstants.RIGHT));
+	    label.add(new JLabel("Meaning", SwingConstants.RIGHT));
+	    panel.add(label, BorderLayout.WEST);
+
+	    JPanel controls = new JPanel(new GridLayout(0, 1, 10, 2));
+	    JTextField slag = new JTextField();
+	    slag.setText(slagText);
+	    controls.add(slag);
+	    JTextField mean = new JTextField();
+	    mean.setText(meaningText);
+	    controls.add(mean);
+	    panel.add(controls, BorderLayout.CENTER);
+
+	    JOptionPane.showMessageDialog(frame, panel, "Modifying Slangword", JOptionPane.PLAIN_MESSAGE);
+
+	    updateInformation.put("slag", slag.getText());
+	    updateInformation.put("mean", mean.getText());
+	    return updateInformation;
 	}
 	
 	private void startSearch() {
@@ -271,8 +361,8 @@ public class HomeScreen {
 		return slangs;
 	}
 	
-	public Hashtable<String, String> showCreateDialog(JFrame frame) {
-	    Hashtable<String, String> logininformation = new Hashtable<String, String>();
+	private Hashtable<String, String> showCreateDialog(JFrame frame) {
+	    Hashtable<String, String> newSlang = new Hashtable<String, String>();
 
 	    JPanel panel = new JPanel(new BorderLayout(5, 5));
 
@@ -290,9 +380,9 @@ public class HomeScreen {
 
 	    JOptionPane.showMessageDialog(frame, panel, "New Slangword", JOptionPane.PLAIN_MESSAGE);
 
-	    logininformation.put("slag", slag.getText());
-	    logininformation.put("mean", mean.getText());
-	    return logininformation;
+	    newSlang.put("slag", slag.getText());
+	    newSlang.put("mean", mean.getText());
+	    return newSlang;
 	}
 	
 	private void showDialog(JFrame frame, String title, String content) {
