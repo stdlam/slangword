@@ -208,7 +208,28 @@ public class HomeScreen {
             			int updateIndex = listMode.indexOf(selected);
             			listMode.set(updateIndex, slag + ": " + mean);
             			updateInFile(SLANGS_FILE_PATH, oldSlag + "`" + oldMean, slag + "`" + mean);
-            			System.out.println("updated valude: " + selected + ", newer: " + slag + ": " + mean);
+            		}
+            	}
+			}
+			
+		});
+		
+		btnDelete.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				String selected = listResult.getSelectedValue().toString();
+				String[] data = selected.split(": ");
+            
+            	if (data.length > 1) {
+            		// show confirm dialog
+            		int result = showConfirmDialog("Readlly", "Do you really to delete it?");
+            		if (result == 0) {
+            			String oldSlag = data[0];
+                		String oldMean = data[1];
+                		int updateIndex = listMode.indexOf(selected);
+            			listMode.remove(updateIndex);
+            			updateInFile(SLANGS_FILE_PATH, oldSlag + "`" + oldMean + "\n", "");
             		}
             	}
 			}
@@ -216,6 +237,16 @@ public class HomeScreen {
 		});
 		
 		setupViews(lblWord);
+	}
+	
+	private int showConfirmDialog(String title, String content) {
+		int input = JOptionPane.showConfirmDialog(frame, 
+                content, title, 
+                JOptionPane.OK_CANCEL_OPTION, JOptionPane.INFORMATION_MESSAGE);
+
+        // 0=ok, 2=cancel
+        System.out.println(input);
+        return input;
 	}
 	
 	private void updateInFile(String filePath, String older, String newer) {
