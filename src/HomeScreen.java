@@ -45,6 +45,7 @@ public class HomeScreen {
 	private JTextField textFieldSearch;
 	private Map<String, Slang> baseSlangs = new HashMap<String, Slang>();
 	
+	private static String SLANGS_RAW_FILE_PATH = "src/slang_raw.txt";
 	private static String SLANGS_FILE_PATH = "src/slang.txt";
 	private static String HISTORIES_FILE_PATH = "src/histories.txt";
 	
@@ -86,7 +87,7 @@ public class HomeScreen {
 	 */
 	private void initialize() {
 		frame = new JFrame();
-		frame.setBounds(100, 100, 666, 580);
+		frame.setBounds(100, 100, 666, 608);
 		frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 		frame.getContentPane().setLayout(null);
 		
@@ -100,7 +101,7 @@ public class HomeScreen {
 		textFieldSearch.setColumns(10);
 		
 		JButton btnSearch = new JButton("Search");
-		btnSearch.setBounds(278, 136, 117, 29);
+		btnSearch.setBounds(278, 136, 85, 29);
 		btnSearch.addActionListener(new ActionListener() {
 
 			@Override
@@ -147,12 +148,14 @@ public class HomeScreen {
 		});
 		frame.getContentPane().add(btnAdd);
 		
-		btnReset.setBounds(413, 27, 117, 29);
+		btnReset.setBounds(26, 540, 117, 29);
 		btnReset.addActionListener(new ActionListener() {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
+				replaceDataFile(SLANGS_RAW_FILE_PATH, SLANGS_FILE_PATH);
 				resetResultList();
+				
 			}
 			
 		});
@@ -237,6 +240,27 @@ public class HomeScreen {
 		});
 		
 		setupViews(lblWord);
+		
+		JButton btnClear = new JButton("Clear");
+		btnClear.setBounds(356, 136, 68, 29);
+		btnClear.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				textFieldSearch.setText("");
+				resetResultList();
+			}
+			
+		});
+		frame.getContentPane().add(btnClear);
+		
+		JButton btnQuiz1 = new JButton("Quiz 1");
+		btnQuiz1.setBounds(413, 540, 117, 29);
+		frame.getContentPane().add(btnQuiz1);
+		
+		JButton btnQuiz2 = new JButton("Quiz 2");
+		btnQuiz2.setBounds(526, 540, 117, 29);
+		frame.getContentPane().add(btnQuiz2);
 	}
 	
 	private int showConfirmDialog(String title, String content) {
@@ -244,8 +268,6 @@ public class HomeScreen {
                 content, title, 
                 JOptionPane.OK_CANCEL_OPTION, JOptionPane.INFORMATION_MESSAGE);
 
-        // 0=ok, 2=cancel
-        System.out.println(input);
         return input;
 	}
 	
@@ -390,6 +412,30 @@ public class HomeScreen {
 			e.printStackTrace();
 		}
 		return slangs;
+	}
+	
+	private void replaceDataFile(String from, String to) {
+		try {
+			File f = new File(from);
+			FileWriter fw = new FileWriter(to, false);
+			
+			if(f.exists()) { 
+				InputStream bin = new FileInputStream(from);
+				BufferedReader reader = new BufferedReader(new InputStreamReader(bin, "utf8"));
+				while (reader.ready()) {
+					String line = reader.readLine();
+					fw.write(line);
+					fw.write("\n");
+				}
+				
+				reader.close();
+				bin.close();
+				fw.close();
+			}
+			
+		} catch(Exception e ) {
+			e.printStackTrace();
+		}
 	}
 	
 	private Hashtable<String, String> showCreateDialog(JFrame frame) {
