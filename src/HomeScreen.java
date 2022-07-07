@@ -269,6 +269,15 @@ public class HomeScreen {
 		
 		JButton btnQuiz2 = new JButton("Quiz 2");
 		btnQuiz2.setBounds(526, 540, 117, 29);
+		btnQuiz2.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				showDefinitionQuiz();
+				
+			}
+			
+		});
 		frame.getContentPane().add(btnQuiz2);
 	}
 	
@@ -298,10 +307,30 @@ public class HomeScreen {
 			options[i] = slangOptions.get(i).getMeaning();
 		}
 		
-		int result = showQuiz("The funny quiz 1", quest, options);
+		int result = showQuiz("The Funny Quiz 1", quest, options);
 		
+		checkIfCorrectOption(result, questionIndex);
+	}
+	
+	private void showDefinitionQuiz() {
+		ArrayList<Slang> slangOptions = randomQuizOptions();
+		
+		int questionIndex = new Random().nextInt(slangOptions.size());
+		Slang questionSlang = slangOptions.get(questionIndex);
+		String quest = "When you see '" + questionSlang.getMeaning() + "'. What do you think it means?";
+		String[] options = new String[4];
+		for (int i = 0; i < NUMBER_OF_QUIZ_ANSWER; i++) {
+			options[i] = slangOptions.get(i).getSlag();
+		}
+		
+		int result = showQuiz("The Funny Quiz 2", quest, options);
+		
+		checkIfCorrectOption(result, questionIndex);
+	}
+	
+	private void checkIfCorrectOption(int result, int correct) {
 		if (result > -1) {
-			if (result == questionIndex) {
+			if (result == correct) {
 				showDialog(frame, "Yayyyy", "Greate, you're right!");
 			} else {
 				showDialog(frame, "Oops", "Don't worry, let's try again untill you're right.");
