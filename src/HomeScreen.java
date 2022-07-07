@@ -48,6 +48,7 @@ public class HomeScreen {
 	private static String SLANGS_RAW_FILE_PATH = "src/slang_raw.txt";
 	private static String SLANGS_FILE_PATH = "src/slang.txt";
 	private static String HISTORIES_FILE_PATH = "src/histories.txt";
+	private static int NUMBER_OF_QUIZ_ANSWER = 4;
 	
 	private DefaultListModel<String> listMode = new DefaultListModel<String>();
 	private DefaultListModel<String> historiesMode = new DefaultListModel<String>();
@@ -226,7 +227,7 @@ public class HomeScreen {
             
             	if (data.length > 1) {
             		// show confirm dialog
-            		int result = showConfirmDialog("Readlly", "Do you really to delete it?");
+            		int result = showConfirmDialog("Really", "Do you really want to delete it?");
             		if (result == 0) {
             			String oldSlag = data[0];
                 		String oldMean = data[1];
@@ -256,11 +257,67 @@ public class HomeScreen {
 		
 		JButton btnQuiz1 = new JButton("Quiz 1");
 		btnQuiz1.setBounds(413, 540, 117, 29);
+		btnQuiz1.addActionListener(new ActionListener() {
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				showSlagQuiz();
+			}
+			
+		});
 		frame.getContentPane().add(btnQuiz1);
 		
 		JButton btnQuiz2 = new JButton("Quiz 2");
 		btnQuiz2.setBounds(526, 540, 117, 29);
 		frame.getContentPane().add(btnQuiz2);
+	}
+	
+	private ArrayList<Slang> randomQuizOptions() {
+		Object[] keys = baseSlangs.keySet().toArray();
+		ArrayList<Slang> slangOptions = new ArrayList<Slang>();
+		
+		while (slangOptions.size() < NUMBER_OF_QUIZ_ANSWER) {
+			int randomIndex = new Random().nextInt(keys.length);
+			Slang randomSlang = baseSlangs.get(keys[randomIndex]);
+			if (!slangOptions.contains(randomSlang)) {
+				slangOptions.add(randomSlang);
+			}
+		}
+		
+		return slangOptions;
+	}
+	
+	private void showSlagQuiz() {
+		ArrayList<Slang> slangOptions = randomQuizOptions();
+		
+		int questionIndex = new Random().nextInt(slangOptions.size());
+		Slang questionSlang = slangOptions.get(questionIndex);
+		String quest = "What is " + questionSlang.getSlag() + " means?";
+		String[] options = new String[4];
+		for (int i = 0; i < NUMBER_OF_QUIZ_ANSWER; i++) {
+			options[i] = slangOptions.get(i).getMeaning();
+		}
+		
+		int result = showQuiz("The funny quiz 1", quest, options);
+		
+		if (result > -1) {
+			if (result == questionIndex) {
+				showDialog(frame, "Yayyyy", "Greate, you're right!");
+			} else {
+				showDialog(frame, "Oops", "Don't worry, let's try again untill you're right.");
+			}
+		}
+	}
+	
+	private int showQuiz(String title, String question, Object[] options) {
+		return JOptionPane.showOptionDialog(frame,
+				question,
+				title,
+				JOptionPane.YES_NO_CANCEL_OPTION,
+				JOptionPane.QUESTION_MESSAGE,
+				null,
+				options,
+				null);
 	}
 	
 	private int showConfirmDialog(String title, String content) {
