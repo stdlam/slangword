@@ -11,6 +11,8 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.io.PrintWriter;
+import java.net.URISyntaxException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
@@ -45,10 +47,12 @@ public class HomeScreen {
 	private JTextField textFieldSearch;
 	private Map<String, Slang> baseSlangs = new HashMap<String, Slang>();
 	
-	private static String SLANGS_RAW_FILE_PATH = "src/slang_raw.txt";
-	private static String SLANGS_FILE_PATH = "src/slang.txt";
-	private static String HISTORIES_FILE_PATH = "src/histories.txt";
+	private static String SLANGS_RAW_FILE_PATH = "slang_raw.txt";
+	private static String SLANGS_FILE_PATH = "slang.txt";
+	private static String HISTORIES_FILE_PATH = "histories.txt";
+	private static String DATA_PATH = "data/";
 	private static int NUMBER_OF_QUIZ_ANSWER = 4;
+	static final ClassLoader loader = Thread.currentThread().getContextClassLoader();
 	
 	private DefaultListModel<String> listMode = new DefaultListModel<String>();
 	private DefaultListModel<String> historiesMode = new DefaultListModel<String>();
@@ -80,7 +84,39 @@ public class HomeScreen {
 	}
 	
 	private void setupData() {
+		writeDownLocalFiles(false);
+		baseSlangs.clear();
 		baseSlangs = readSlangsData(SLANGS_FILE_PATH);
+	}
+	
+	private void writeDownLocalFiles(boolean isReset) {
+		try {
+			
+			File f = new File(SLANGS_FILE_PATH);
+			if (!f.exists() || isReset) {
+				f.createNewFile();
+				File histories = new File(HISTORIES_FILE_PATH);
+				histories.createNewFile();
+				
+				FileWriter fw = new FileWriter(SLANGS_FILE_PATH, false);
+				InputStream bin = loader.getResourceAsStream(SLANGS_RAW_FILE_PATH);
+				BufferedReader reader = new BufferedReader(new InputStreamReader(bin, "utf8"));
+				while (reader.ready()) {
+					String line = reader.readLine();
+					fw.write(line);
+					fw.write("\n");
+				}
+				
+				reader.close();
+				bin.close();
+				fw.close();
+				
+				System.out.println("writeDownLocalFiles from " + loader.getResource(SLANGS_RAW_FILE_PATH).getFile() + " to " + SLANGS_FILE_PATH);
+			}
+			
+		} catch(Exception e ) {
+			e.printStackTrace();
+		}
 	}
 
 	/**
@@ -139,6 +175,7 @@ public class HomeScreen {
 						s.setMeaning(mean);
 						s.setSlag(slag);
 						listMode.addElement(s.toString());
+						baseSlangs.put(slag, s);
 						
 						writeData(SLANGS_FILE_PATH, slag + "`" + mean, true);
 						showDialog(frame, "Message", "This word is saved!");
@@ -154,9 +191,10 @@ public class HomeScreen {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				replaceDataFile(SLANGS_RAW_FILE_PATH, SLANGS_FILE_PATH);
+				writeDownLocalFiles(true);
+				setupData();
 				resetResultList();
-				
+				lblHistories.setText(readHistoriesData());
 			}
 			
 		});
@@ -211,7 +249,9 @@ public class HomeScreen {
             		if (isChanged) {
             			int updateIndex = listMode.indexOf(selected);
             			listMode.set(updateIndex, slag + ": " + mean);
+            			
             			updateInFile(SLANGS_FILE_PATH, oldSlag + "`" + oldMean, slag + "`" + mean);
+            			setupData();
             		}
             	}
 			}
@@ -233,6 +273,8 @@ public class HomeScreen {
                 		String oldMean = data[1];
                 		int updateIndex = listMode.indexOf(selected);
             			listMode.remove(updateIndex);
+            			baseSlangs.remove(oldSlag);
+            			
             			updateInFile(SLANGS_FILE_PATH, oldSlag + "`" + oldMean + "\n", "");
             		}
             	}
@@ -358,14 +400,31 @@ public class HomeScreen {
 	}
 	
 	private void updateInFile(String filePath, String older, String newer) {
-		System.out.println("updateInFile - filePath=" + filePath + ", older=" + older + ", newer=" + newer);
+		//System.out.println("updateInFile - filePath=" + filePath + ", older=" + older + ", newer=" + newer);
 		try {
-			Path path = Paths.get(filePath);
-			Charset charset = StandardCharsets.UTF_8;
+			//Path path = Paths.get(loader.getResource(filePath).toURI());
+			//Charset charset = StandardCharsets.UTF_8;
 
-			String content = new String(Files.readAllBytes(path), charset);
-			content = content.replace(older, newer);
-			Files.write(path, content.getBytes(charset));
+			String contents = "";
+			InputStream bin = new FileInputStream(filePath);
+			BufferedReader reader = new BufferedReader(new InputStreamReader(bin, "utf-8"));
+			while (reader.ready()) {
+				String line = reader.readLine();
+				contents += line;
+				contents += "\n";
+			}
+			contents = contents.replace(older, newer);
+			FileWriter fw = new FileWriter(filePath, false);
+			fw.write(contents);
+			
+			reader.close();
+			bin.close();
+			fw.close();
+			
+			//String content = new String(Files.readAllBytes(path), charset);
+			//contents = contents.replace(older, newer);
+			//Files.write(path, content.getBytes(charset));
+			System.out.println("updateInFile wrote to " + loader.getResource(filePath).getFile() + ", content length=" + contents.length());
 		  } catch (IOException e) {
 		     //Simple exception handling, replace with what's necessary for your use case!
 		     throw new RuntimeException("Generating file failed", e);
@@ -403,13 +462,16 @@ public class HomeScreen {
 			String keyword = textFieldSearch.getText();
 			Object[] keys = { keyword };
 			setupResultList(keys, true);
-			historiesMode.addElement(keyword);
-			if (lblHistories.getText().isEmpty()) {
-				lblHistories.setText(keyword);
-			} else {
-				lblHistories.setText(lblHistories.getText() + ", " + keyword);
-			}
-			writeData(HISTORIES_FILE_PATH, lblHistories.getText(), false);
+			
+			if (baseSlangs.get(keyword) != null) {
+				historiesMode.addElement(keyword);
+				if (lblHistories.getText().isEmpty()) {
+					lblHistories.setText(keyword);
+				} else {
+					lblHistories.setText(lblHistories.getText() + ", " + keyword);
+				}
+				writeData(HISTORIES_FILE_PATH, lblHistories.getText(), false);
+			} 
 		}
 	}
 	
@@ -435,9 +497,12 @@ public class HomeScreen {
 		Object[] keys = baseSlangs.keySet().toArray(); 
 		setupResultList(keys, false);
 		
-		int randomIndex = new Random().nextInt(keys.length);
-		Slang randomSlang = baseSlangs.get(keys[randomIndex]);
-		lblWord.setText(randomSlang.getSlag() + " means " + randomSlang.getMeaning() + ".");
+		if (keys.length > 0) {
+			int randomIndex = new Random().nextInt(keys.length);
+			Slang randomSlang = baseSlangs.get(keys[randomIndex]);
+			lblWord.setText(randomSlang.getSlag() + " means " + randomSlang.getMeaning() + ".");
+		}
+		
 	}
 	
 	private void setupResultList(Object[] keys, boolean isFromSearch) {
@@ -469,56 +534,54 @@ public class HomeScreen {
 	private Map<String, Slang> readSlangsData(String filePath) {
 		Map<String, Slang> slangs = new HashMap<String, Slang>();
 		try {
-			File f = new File(filePath);
-			if(f.exists()) { 
-				InputStream bin = new FileInputStream(filePath);
-				BufferedReader reader = new BufferedReader(new InputStreamReader(bin, "utf8"));
-				int lineIndex = 0;
-				while (reader.ready()) {
-					String line = reader.readLine();
-					if (lineIndex <= 0) {
-						lineIndex++;
-					} else {
-						String[] meaning = line.split("`");
-						if(meaning.length > 1) {
-							Slang slang = new Slang();
-							slang.setSlag(meaning[0]);
-							slang.setMeaning(meaning[1]);
-							slangs.put(meaning[0], slang);
-							
-						}
+			System.out.println("readSlangsData from filePath " + filePath);
+			InputStream bin = new FileInputStream(filePath);
+			BufferedReader reader = new BufferedReader(new InputStreamReader(bin, "utf8"));
+			int lineIndex = 0;
+			while (reader.ready()) {
+				String line = reader.readLine();
+				if (lineIndex <= 0) {
+					lineIndex++;
+				} else {
+					lineIndex++;
+					String[] meaning = line.split("`");
+					if (meaning.length > 1) {
+						Slang slang = new Slang();
+						slang.setSlag(meaning[0]);
+						slang.setMeaning(meaning[1]);
+						slangs.put(meaning[0], slang);
+						
 					}
 				}
-				
-				reader.close();
-				bin.close();
 			}
+			System.out.println("slangs read " + lineIndex);
+			reader.close();
+			bin.close();
 			
 		} catch(Exception e ) {
 			e.printStackTrace();
 		}
+		
 		return slangs;
 	}
 	
-	private void replaceDataFile(String from, String to) {
+	private void replaceDataFile(String fromFileName, String toPath) {
 		try {
-			File f = new File(from);
-			FileWriter fw = new FileWriter(to, false);
+			FileWriter fw = new FileWriter(loader.getResource(toPath).getFile(), false);
 			
-			if(f.exists()) { 
-				InputStream bin = new FileInputStream(from);
-				BufferedReader reader = new BufferedReader(new InputStreamReader(bin, "utf8"));
-				while (reader.ready()) {
-					String line = reader.readLine();
-					fw.write(line);
-					fw.write("\n");
-				}
-				
-				reader.close();
-				bin.close();
-				fw.close();
+			InputStream bin = loader.getResourceAsStream(fromFileName);
+			BufferedReader reader = new BufferedReader(new InputStreamReader(bin, "utf8"));
+			while (reader.ready()) {
+				String line = reader.readLine();
+				fw.write(line);
+				fw.write("\n");
 			}
 			
+			reader.close();
+			bin.close();
+			fw.close();
+			
+			System.out.println("readSlangsData from " + loader.getResource(fromFileName).getFile() + " to " + loader.getResource(toPath).getFile());
 		} catch(Exception e ) {
 			e.printStackTrace();
 		}
@@ -559,19 +622,15 @@ public class HomeScreen {
 	private String readHistoriesData() {
 		String result = "";
 		try {
-			File f = new File(HISTORIES_FILE_PATH);
-			if(f.exists()) { 
-				InputStream bin = new FileInputStream(HISTORIES_FILE_PATH);
-				BufferedReader reader = new BufferedReader(new InputStreamReader(bin, "utf8"));
-				int lineIndex = 0;
-				while (reader.ready()) {
-					String line = reader.readLine();
-					if (!line.isEmpty()) result = line;
-				}
-				
-				reader.close();
-				bin.close();
+			InputStream bin = new FileInputStream(HISTORIES_FILE_PATH);
+			BufferedReader reader = new BufferedReader(new InputStreamReader(bin, "utf8"));
+			while (reader.ready()) {
+				String line = reader.readLine();
+				if (!line.isEmpty()) result = line;
 			}
+			
+			reader.close();
+			bin.close();
 			
 		} catch(Exception e ) {
 			e.printStackTrace();
@@ -582,12 +641,21 @@ public class HomeScreen {
 	private void writeData(String filePath, String line, boolean isAppend) {
 		try {
 			//DataOutputStream ft = new DataOutputStream(new FileOutputStream(FILE_PATH));
+			//PrintWriter writer = 
+		     //          new PrintWriter(
+		       //              new File(loader.getResource(filePath).getFile()));
 			FileWriter fw = new FileWriter(filePath, isAppend);
-			
+			/*
+			 * if (isAppend) { writer.append(line); } else { writer.write(line); }
+			 * writer.append("\n");
+			 * 
+			 * writer.close();
+			 */
 			fw.write(line);
 			fw.write("\n");
-			
 			fw.close();
+			
+			System.out.println("wrote data to " + filePath);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
